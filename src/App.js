@@ -8,11 +8,81 @@ class App extends Component {
   constructor(props) {
     super(props)
 
+    this.webSocket = new WebSocket('ws://localhost:4960/echo')
+    this.webSocket.onopen = (event) => {
+
+      this.webSocket.onmessage = (event) => {
+        
+        if (!event.data) {
+          return
+        }
+
+        if (event.data.length < 1) {
+          return
+        }
+
+        let n = event.data.indexOf('=')
+        let token = event.data
+        let str = null
+        
+        if (n > 0) {
+          token = event.data.substr(0, n)
+          str = event.data.substr(n+1)
+        }
+
+        switch(token) {
+          case "echo":
+            alert(str)
+            break
+          case "json":
+            let parsedData = JSON.parse(str)
+
+            if (!parsedData.blks) {
+              return
+            }
+
+            parsedData.blks.forEach((block) => {
+              if (block.blktype === 'usertracking') {
+                let statementIndex = block.stmtr[0].stmti - 1
+                this.setState({
+                  trackingSectionText: parsedData.stmts[statementIndex]
+                })
+              }
+            })
+            break
+          case "fnc":
+            // call some functions
+            // used mostly for debug, I think
+            break
+        }
+
+      }
+
+      this.webSocket.send('servinfo=')
+
+      this.setState({
+        webSocketOpen: true,
+      })
+    }
+
     this.state = {
       trackingSectionOpen: false,
       sharingSectionOpen: false,
       profilingSectionOpen: false,
+      webSocketOpen: false,
+      urlInputValue: '',
+      trackingSectionText: '',
     }
+  }
+
+  updateUrlInputValue = (event) => {
+    this.setState({
+      urlInputValue: event.target.value,
+    })
+  }
+
+  submitUrl = (event) => {
+    this.webSocket.send(`url=${this.state.urlInputValue}`)  
   }
 
   toggleTrackingSection = () => {
@@ -49,9 +119,9 @@ class App extends Component {
           <Row>
             <Col>
               <InputGroup>
-                <Input type="text" id="url-input"></Input>
+                <Input type="text" id="url-input" value={this.state.urlInputValue} onChange={this.updateUrlInputValue}></Input>
                 <InputGroupAddon addonType="append">
-                  <Button type="submit">Submit</Button>
+                  <Button type="submit" disabled={!this.state.webSocketOpen} onClick={this.submitUrl}>Submit</Button>
                 </InputGroupAddon>
               </InputGroup>
             </Col>
@@ -82,20 +152,7 @@ class App extends Component {
                     <Collapse isOpen={!this.state.trackingSectionOpen}>
                       Expand to view
                     </Collapse>
-                    <Collapse isOpen={this.state.trackingSectionOpen}>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris hendrerit aliquet odio sit amet scelerisque. Nulla eu tellus sed ipsum venenatis sollicitudin et quis ipsum. Vestibulum quis arcu sed ligula posuere molestie. Donec consectetur urna id massa scelerisque, nec congue sem scelerisque. Suspendisse tempor cursus elit eu congue. Sed congue nisl quis est placerat auctor a a ligula. Nam ullamcorper interdum odio. Donec ut enim risus. Sed eget molestie diam. Integer pellentesque tellus a porta commodo. Suspendisse laoreet auctor dui, ac vulputate nisl molestie nec.
-                      <br />
-                      <br />
-                      Aenean sapien augue, congue ut rutrum in, ultricies vitae erat. Sed dictum egestas risus, ut sodales odio lobortis eget. Duis finibus iaculis tortor faucibus pretium. Praesent at risus ac sapien placerat cursus at ornare mi. Donec in lacinia elit. Curabitur nec erat ut arcu placerat ornare. Duis sagittis odio porttitor dui venenatis, et aliquam mauris tincidunt. Nam vel malesuada velit. Aliquam posuere condimentum quam, nec consequat nulla hendrerit a. Vestibulum dictum est ut rhoncus suscipit. Sed a semper velit, ut feugiat libero. Vestibulum aliquam suscipit quam, et varius ipsum maximus nec.
-                      <br />
-                      <br />
-                      Fusce viverra convallis hendrerit. Nunc eget est sollicitudin, porta quam non, pellentesque ipsum. Curabitur nec faucibus nulla. Nullam consequat quam vitae posuere ullamcorper. Etiam in ullamcorper nulla, quis dignissim libero. Nunc interdum purus quis mattis varius. Etiam vel scelerisque erat. Morbi ante est, dignissim et nulla eget, hendrerit euismod neque. Cras dapibus quam in ante dignissim sodales. Duis lorem sapien, porttitor id purus et, venenatis dapibus odio. Morbi ac nunc id leo dictum rhoncus. Nullam nec dui eleifend erat egestas commodo.
-                      <br />
-                      <br />
-                      Donec nec cursus metus, id dapibus tellus. Phasellus euismod eros eget orci sollicitudin laoreet. Duis non lorem accumsan, tempor massa eget, vestibulum ex. Nulla ultrices felis vitae purus tempus, in rutrum nisi cursus. Quisque convallis diam nisl. Curabitur quis nunc interdum, suscipit leo id, vehicula ante. Ut feugiat scelerisque massa, sed hendrerit urna. Etiam luctus, neque quis aliquam tincidunt, metus ipsum posuere justo, a cursus diam ipsum ut elit. Aenean arcu quam, finibus non tellus at, tempor consectetur magna. Sed id gravida quam. Fusce sed nisl sit amet ipsum sollicitudin malesuada sed non sem. Maecenas malesuada justo ac justo facilisis finibus. Sed sollicitudin urna urna, sit amet finibus elit commodo eget.
-                      <br />
-                      <br />
-                      Pellentesque tristique placerat mauris, vitae pulvinar sapien commodo non. Praesent finibus mi ac accumsan pellentesque. Donec pellentesque sodales augue id blandit. Nunc nec mattis metus, eget euismod diam. Nullam lacinia dapibus commodo. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Nam sit amet nisi ac nisl vestibulum tempus sit amet quis libero. Maecenas et enim ipsum. Pellentesque euismod sollicitudin finibus. Nulla odio leo, varius ut aliquet eget, gravida quis mi. Nunc scelerisque arcu in fringilla iaculis. Suspendisse finibus nisl ut lectus blandit ullamcorper. Nunc gravida diam et dictum venenatis. Morbi venenatis hendrerit dui a porttitor. 
+                    <Collapse isOpen={this.state.trackingSectionOpen} dangerouslySetInnerHTML={{__html: this.state.trackingSectionText}}>
                     </Collapse>
                   </CardText>
                 </CardBody>
